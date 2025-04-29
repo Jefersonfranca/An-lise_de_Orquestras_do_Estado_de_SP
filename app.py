@@ -71,32 +71,6 @@ if uploaded_file:
     fig2 = px.bar(entidades.head(10), x="Entidade Gestora", y="Nº de Cidades Atendidas", color="Entidade Gestora")
     st.plotly_chart(fig2, use_container_width=True)
 
-    # Mapa interativo
-    st.subheader("📍 Mapa Interativo das Cidades com Orquestra")
-    cidades_coords = df[df["Tem Orquestra"] == "Sim"]["Cidade"].dropna().unique()
-    geolocator = Nominatim(user_agent="geoapi")
-    geocode = RateLimiter(geolocator.geocode, min_delay_seconds=1)
-
-    localizacoes = []
-    for cidade in cidades_coords:
-        try:
-            location = geocode(f"{cidade}, SP, Brasil")
-            if location:
-                localizacoes.append({"Cidade": cidade, "Lat": location.latitude, "Lon": location.longitude})
-        except:
-            continue
-
-    mapa_df = pd.DataFrame(localizacoes)
-    fig_map = px.scatter_geo(
-        mapa_df,
-        lat="Lat",
-        lon="Lon",
-        hover_name="Cidade",
-        scope="south america",
-        title="Localização das Cidades com Orquestra"
-    )
-    st.plotly_chart(fig_map, use_container_width=True)
-
     # Lista de cidades com maior número de orquestras
     st.subheader("📄 Lista: Cidades com Maior Número de Orquestras")
     st.dataframe(ranking_cidades)
