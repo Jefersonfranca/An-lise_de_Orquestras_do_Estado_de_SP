@@ -1,7 +1,6 @@
-import streamlit as st
+import streamlit as st 
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
 
@@ -13,6 +12,10 @@ uploaded_file = st.file_uploader("Faça upload da planilha (.xlsx)", type="xlsx"
 
 if uploaded_file:
     df_raw = pd.read_excel(uploaded_file, sheet_name="Base SP", skiprows=6)
+    
+    # Limitar aos dados entre as linhas 8 e 687
+    df_raw = df_raw.iloc[:688].reset_index(drop=True)
+
     df = df_raw.copy()
     df.columns = df.iloc[0]
     df = df.drop(index=0).reset_index(drop=True)
@@ -26,6 +29,17 @@ if uploaded_file:
         "Entidade Gestora": "Entidade Gestora",
         "Status": "Status"
     })
+
+    # 🔹 Limpeza e padronização dos dados de Modelo de Gestão
+    df["Modelo de Gestão"] = df["Modelo de Gestão"].astype(str).str.strip().str.title()
+    df["Modelo de Gestão"] = df["Modelo de Gestão"].replace({
+        "Particular ": "Particular",
+        "Particular": "Particular"
+    })
+
+    # 🔸 Substituir valores 'nan' por "Não identificado"
+    df["Modelo de Gestão"] = df["Modelo de Gestão"].replace("Nan", pd.NA)
+    df["Modelo de Gestão"] = df["Modelo de Gestão"].fillna("Não identificado")
 
     st.subheader("📊 Indicadores Gerais")
     col1, col2, col3 = st.columns(3)
@@ -44,11 +58,11 @@ if uploaded_file:
     modelo_gestao = st.sidebar.multiselect("Modelo de Gestão", options=df["Modelo de Gestão"].dropna().unique(), default=df["Modelo de Gestão"].dropna().unique())
 
     df_filtros = df[
-        df["Região"].isin(regioes) &
+        df["Região"].isin(regioes) & 
         df["Modelo de Gestão"].isin(modelo_gestao)
     ]
 
-     # Gráfico de pizza - Modelos de Gestão
+    # Gráfico de pizza - Modelos de Gestão
     st.subheader("🏛️ Distribuição por Modelo de Gestão")
     fig2 = px.pie(
         df_filtros[df_filtros["Tem Orquestra"] == "Sim"],
@@ -57,18 +71,18 @@ if uploaded_file:
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-    # Ranking das top 10 cidades com mais orquestras
-    st.subheader("🏋️ Top 10 Cidades com Mais Orquestras")
+    # 🔸 Ranking das top 5 cidades com mais orquestras
+    st.subheader("🏙️ Top 5 Cidades com Mais Orquestras")
     ranking_cidades = df[df["Tem Orquestra"] == "Sim"].groupby("Cidade").size().reset_index(name="Nº de Orquestras")
-    ranking_cidades = ranking_cidades.sort_values(by="Nº de Orquestras", ascending=False).head(10)
+    ranking_cidades = ranking_cidades.sort_values(by="Nº de Orquestras", ascending=False).head(5)
     fig1 = px.bar(ranking_cidades, x="Cidade", y="Nº de Orquestras", color="Cidade")
     st.plotly_chart(fig1, use_container_width=True)
 
-    # Ranking das entidades gestoras com mais cidades atendidas
-    st.subheader("📆 Entidades Gestoras com Maior Abrangência")
+    # 🔸 Ranking das top 5 entidades gestoras com maior abrangência
+    st.subheader("🏢 Top 5 Entidades Gestoras com Maior Abrangência")
     entidades = df[df["Tem Orquestra"] == "Sim"].groupby("Entidade Gestora")["Cidade"].nunique().reset_index(name="Nº de Cidades Atendidas")
-    entidades = entidades.sort_values(by="Nº de Cidades Atendidas", ascending=False)
-    fig2 = px.bar(entidades.head(10), x="Entidade Gestora", y="Nº de Cidades Atendidas", color="Entidade Gestora")
+    entidades = entidades.sort_values(by="Nº de Cidades Atendidas", ascending=False).head(5)
+    fig2 = px.bar(entidades, x="Entidade Gestora", y="Nº de Cidades Atendidas", color="Entidade Gestora")
     st.plotly_chart(fig2, use_container_width=True)
 
     # Lista de cidades com maior número de orquestras
